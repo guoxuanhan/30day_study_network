@@ -1,6 +1,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <cstring>
+#include <stdio.h>
+#include <unistd.h>
 #include "util.h"
 
 int main() {
@@ -18,6 +20,27 @@ int main() {
 
     // 3. 使用connect连接到服务器
     errif(connect(sockfd, (sockaddr*)&serv_addr, sizeof(serv_addr)) == -1, "socket connect error");
+
+    while(true) {
+        char buf[1024];
+        bzero(&buf, sizeof(buf));
+        scanf("%s", buf);
+        ssize_t write_bytes = write(sockfd, buf, sizeof(buf));
+        if(write_bytes == -1) {
+            printf("socket already disconnected, can't write any more\n");
+            break;
+        }
+        bzero(&buf, sizeof(buf));
+        ssize_t read_bytes = read(sockfd, buf, sizeof(buf));
+        if(read_bytes > 0) {
+            printf("message from server: %s\n", buf);
+        } else if(read_bytes == 0) {
+            printf("server socket disconnected\n");
+        } else if(read_bytes == -1) {
+            close(sockfd);
+            errif(true, "socket read error");
+        }
+    }
 
     return 0;
 }

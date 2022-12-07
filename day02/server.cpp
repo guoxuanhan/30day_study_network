@@ -2,6 +2,7 @@
 #include <arpa/inet.h> // 这个头文件包含了netinet/in.h，不用再次包含
 #include <cstring> // 使用到了bzero函数
 #include <stdio.h> // 使用到了printf函数
+#include <unistd.h> // 使用到了send write函数
 #include "util.h"
 
 int main() {
@@ -47,6 +48,23 @@ int main() {
     // 另外accept函数会阻塞当前程序，知道有一个socket客户端被接收后程序才会往下执行。
 
     // 到这里，客户端就可以通过ip和端口连接这个服务器了。
+
+    while (true) {
+        char buf[1024];// 定义接收数据缓冲区
+        bzero(&buf, sizeof(buf));// 清空缓冲区
+        ssize_t read_bytes = read(clnt_sockfd, buf, sizeof(buf));// 从客户端socket读到缓冲区中，返回已读到的数据大小
+        if(read_bytes > 0) {
+            printf("message from client fd %d: %s\n", clnt_sockfd, buf);
+            write(clnt_sockfd, buf, sizeof(buf));// 将相同的数据写回客户端
+        } else if( read_bytes == 0) {// read返回0表示EOF（客户端主动断开连接）
+            printf("client fd %d disconnected\n", clnt_sockfd);
+            close(clnt_sockfd);// 彻底关闭socket
+            break;
+        } else if(read_bytes == -1) {// read返回-1表示发生了错误
+            close(clnt_sockfd);
+            errif(true, "socket read error");
+        }
+    }
 
     return 0;
 }
